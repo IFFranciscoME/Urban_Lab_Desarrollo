@@ -13,8 +13,6 @@ import proceso as pr
 import datos as dat
 import entradas as ent
 import visualizaciones as vs
-import numpy as np
-import pandas as pd
 from time import time
 
 # Start time
@@ -38,7 +36,8 @@ if __name__ == "__main__":
 	t1 = time()
 	
 	# Visualizations
-	vs.map_metric(metric_s, 'Estres', ent.map_path)
-	vs.map_metric(metric_a, 'Adaptabilidad', ent.map_path)
+	fig = vs.map_metric(metric_s, 'Estres', ent.shp_path, ent.kml_path)
+	fig.show()
+	#vs.map_metric(metric_a, 'Adaptabilidad', ent.shp_path, ent.kml_path)
 
 	#print('el tiempo transcurrido fue: ' + str(t1-t0))
