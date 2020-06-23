@@ -43,7 +43,7 @@ def read_file(file_path, sheet):
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Cleaning Database that is in a DataFrame
 # -- ------------------------------------------------------------------------------------ -- #
-def clean_data(df_data):
+def clean_data_pymes(df_data):
 	"""
     Parameters
     ---------
@@ -77,6 +77,55 @@ def clean_data(df_data):
 	df['aumento_precios'].replace(100, np.nan, inplace=True)
 
 	return df
+
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: Cleaning Database that is in a DataFrame
+# -- ------------------------------------------------------------------------------------ -- #
+def clean_data_prices(df_data):
+	"""
+    Parameters
+    ---------
+    :param:
+        df_data: DataFrame : data in a DF
+
+    Returns
+    ---------
+    :return:
+        df: DataFrame : clean data in DF
+
+    Debuggin
+    ---------
+        df_data = read_file(ent.path, ent.sheet)
+
+	"""
+	# Make a copy
+	df = df_data.copy()
+	# Quitar numeros innecesarios
+	def col_no_numb(df):
+		# De las columnas
+		col_n = ['División', 'Grupo', 'Clase']
+		# Quitar numeros
+		no_numb = [df[i].str.replace('\d+', '') for i in col_n]
+		# Quitar punto y espacio inicial
+		for i in range(len(col_n)):
+			point = ['. ', '.. ', '... ']
+			df[col_n[i]] = no_numb[i].str.replace(point[i], '', regex=False)
+		return df
+	df = col_no_numb(df)
+	
+	# Nombre de todas las columnas con precios acomodadas correctamente
+	col_df = list(df.columns)[::-1][0:22]
+	
+	# Diferencias
+	#df_dif = df[col_df].diff(axis=1)
+	#df_dif = df[col_df].pct_change(axis=1)
+	
+	#df_new = df[['División', 'Grupo', 'Clase', 'Generico', 'Especificación']]
+	
+	df_new = pd.merge(df[['División', 'Grupo', 'Clase', 'Generico', 'Especificación']], 
+				   df[col_df].pct_change(axis=1).iloc[:,1:], 
+				   left_index=True, right_index=True)
+	return df_new
 
 
 # -- ------------------------------------------------------------------------------------ -- #
