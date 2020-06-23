@@ -127,4 +127,116 @@ def type_verification(condition, result, data):
 		if type(condition) == tuple:
 			if condition[0] < data and data <= condition[1]:
 				return result
+
+#%%
+'''
+_ __ __________________________________________________________________________________ __ _ #
+
+  Analisis de series de tiempo
+_ __ ____________________________________________________________________________________ __ #
+  
+'''
+
+import numpy as np
+from statsmodels.tsa.stattools import  adfuller #prueba de estacionariedad
+from statsmodels.tsa.stattools import pacf,acf
+from statsmodels.stats.diagnostic import het_arch
+from scipy.stats import shapiro
+import matplotlib.pyplot as plt
+
+def check_stationarity(data):
+    data = data["Actual"]
+    test_results = adfuller(data)
+    if test_results[0] < 0 and test_results[1] <= 0.05:
+        result = True
+    else:
+        result = False
+    results = {'Resultado': result,
+               'Test stadisctic': test_results[0],
+               'P-value': test_results[1]
+               }
+    out=results
+    if test_results[1]>0.01:
+        data_d1 = data.diff().dropna()
+        results_d1 = adfuller(data_d1)
+        if results_d1[0] < 0 and results_d1[1] <= 0.01:
+
+            results_d1 = {'Resultado':True,
+                          'Test stadistic':results_d1[0],
+                          'P-value':results_d1[1]
+
+            }
+        out={'Datos originales': results,
+             'Primera diferencia': results_d1}
+    return out
+
+
+def fit_arima(data):
+    test_result = check_stationarity(data)
+    if test_result["Resultado"]==True:
+        significant_coef = lambda x: x if x>0.5 else None
+        #d=0
+        p = pacf(data["Actual"])
+        p = pd.DataFrame(significant_coef(p[i]) for i in range(0,11))
+        idx=0
+        for i in range(len(p)):
+            if p.iloc[i] !=np.nan:
+                idx=i
+        p=p.iloc[idx].index
+
+        q = acf(data["Actual"])
+        q = pd.DataFrame(significant_coef(q[i]) for i in range(0, 11))
+        idx=0
+        for i in range(len(q)):
+            if q.iloc[i] != np.nan:
+                idx = i
+        q = q.iloc[idx].index
+
+
+        #model = ARIMA(data,order=(p,d,q))
+        #model.fit(disp=0)
+    return [p,q]
+
+
+def norm_test(data):
+
+    n_test=shapiro(data["Actual"])
+    test_results = { 'Test statistic':n_test[0],
+                    'P-value':n_test[1] #si el p-value de la prueba es menor a alpha, rechazamos H0
+    }
+    return test_results
+    """
+    paramaetros = 2
+    J = 90
+    grados_libertad = j-p-1
+    [freq,x,p]=plt.hist(data,J,density=True)
+    pi = st.norm.pdf(x, loc=np.mean(data), scale=np.std(data))
+    Ei=x*pi
+
+    x2 = st.chisquare(freq,Ei)
+    Chi_est = st.chi2.ppf(q=0.95, df=grados_libertad)
+    """
+	
+
+def diff_series(data,lags):
+    data = data["Actual"].diff(lags).dropna()
+    return data
+
+
+def arch_test(data):
+    data=data["Actual"]
+    test= het_arch(data)
+    results = {"Estadístico de prueba": test[0],
+               "P-value":test[1]
+    }
+    results=pd.DataFrame(results,index=["Resultados"])
+    return results
+
+
+def get_outliers(data):
+	#vs.g_AtipicalData(data)
+	box = plt.boxplot(data["Actual"])
+	bounds = [item.get_ydata() for item in box["whiskers"]]
+	datos_atipicos = data.loc[(data["Actual"] > bounds[1][1]) | (data["Actual"] < bounds[0][1])]
+	return datos_atipicos
 			
