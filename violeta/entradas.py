@@ -7,9 +7,17 @@
 # .. Repositorio: https://github.com/IFFranciscoME/Urban_Lab.git                         .. #
 # .. ................................................................................... .. #
 
-data_path = 'Base_de_datos.xlsx'
-data_sheet = 'IIEG_E_1'
+# -- BASES DE DATOS --
 
+# Datos de MiPyMEs
+path_data_pyme = 'Base_de_datos.xlsx'
+sheet_data_pyme = 'IIEG_E_1'
+
+# Datos de Precios
+path_data_prices = 'Precios_INEGI.xlsx'
+sheet_data_prices = 'Datos_acomodados'
+
+# GeoDatos de coordenadas por CP
 shp_path = "cp_jal_2/CP_14_Jal_v6.shp"
 kml_path = "cp_jal_2/CP_14_Jal_v6.kml"
 # -- ------------------------------------------------------------------------------------ -- #

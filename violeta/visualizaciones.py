@@ -8,13 +8,13 @@
 # .. ................................................................................... .. #
 
 # Importing and initializing main Python libraries
-import datos as dat
 import plotly.express as px
+import geojson
 
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Map
 # -- ------------------------------------------------------------------------------------ -- #
-def map_metric(df_data, metric, path_shape, path_kml):
+def map_metric(df_data, metric):
 	"""
     Parameters
     ---------
@@ -34,7 +34,8 @@ def map_metric(df_data, metric, path_shape, path_kml):
 		metric = 'estres'
 		path: str : "cp_jal_2/CP_14_Jal_v6.shp"
 	"""
-	j_file = dat.read_map_files(path_shape, path_kml)
+	with open('archivos/CP.json') as f:
+		   j_file = geojson.load(f)
 	fig = px.choropleth_mapbox(df_data, geojson=j_file, locations= 'CP', color=metric,
 	                           color_continuous_scale="Viridis",
 	                           range_color=(0, max(df_data[metric])),

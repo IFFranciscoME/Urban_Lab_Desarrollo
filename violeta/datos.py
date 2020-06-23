@@ -82,7 +82,7 @@ def clean_data(df_data):
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Read shape file and storing it in to a DataFrame
 # -- ------------------------------------------------------------------------------------ -- #
-def read_map_files(path_shape, path_kml):
+def read_map_files():
 	"""
     Parameters
     ---------
@@ -99,17 +99,26 @@ def read_map_files(path_shape, path_kml):
         path = ent.map_path
 
 	"""
+	# Donde se encuentran los archivos
+	path_shape = "archivos/cp_jal_2/CP_14_Jal_v6.shp"
+	path_kml = "archivos/cp_jal_2/CP_14_Jal_v6.kml"
+	
+	# Abrir los archivos y guardalos en DataFrames
 	gpd.io.file.fiona.drvsupport.supported_drivers['KML'] = 'rw'
-	geodf_kml = gpd.read_file('archivos/' + path_kml)
-	geodf_shp = gpd.read_file('archivos/' + path_shape)
+	geodf_kml = gpd.read_file(path_kml)
+	geodf_shp = gpd.read_file(path_shape)
+	
+	# Convertirlo en GeoJSON
+	geodf_kml.to_file(path_kml, driver="GeoJSON")
 
-	geodf_kml.to_file('archivos/' + path_kml, driver="GeoJSON")
-
-	with open('archivos/' + path_kml) as geofile:
+	with open(path_kml) as geofile:
 		j_file = json.load(geofile)
 	# Asignar el id al kml
 	i = 0
 	for feature in j_file["features"]:
 		feature['id'] = geodf_shp['d_cp'][i]
 		i += 1
-	return j_file
+	
+	# Guardalo en los archivos
+	with open('archivos/CP.json', 'w') as fp:
+		   json.dump(j_file, fp)
