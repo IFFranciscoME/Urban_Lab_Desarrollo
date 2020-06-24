@@ -11,7 +11,10 @@
 # Importing and initializing main Python libraries
 import math
 import pandas as pd
-
+import numpy as np
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.stattools import  adfuller
+from statsmodels.tsa.stattools import pacf,acf
 
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Calculate metric
@@ -137,9 +140,7 @@ _ __ ___________________________________________________________________________
   
 '''
 
-import numpy as np
-from statsmodels.tsa.stattools import  adfuller #prueba de estacionariedad
-from statsmodels.tsa.stattools import pacf,acf
+
 from statsmodels.stats.diagnostic import het_arch
 from scipy.stats import shapiro
 import matplotlib.pyplot as plt
@@ -240,3 +241,144 @@ def get_outliers(data):
 	datos_atipicos = data.loc[(data["Actual"] > bounds[1][1]) | (data["Actual"] < bounds[0][1])]
 	return datos_atipicos
 			
+#%%
+
+
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: According with condition in dict
+# -- ------------------------------------------------------------------------------------ -- #
+def fit_arima_(data):
+	
+	def check_stationarity_t(data):
+		  
+	    # Usar dicky fuller
+		test_results = adfuller(data)
+	    
+	    # Cuando se cumple esto es estacionaria la serie orginal
+		if test_results[0] < 0 and test_results[1] <= 0.05:
+			lags = 0
+			new_data = data
+        
+		# Cuando no se cumple se debe diferenciar para que sea estacionaria
+		else:
+			
+			for i in range(3):
+	            
+	            # Diferenciar datos
+				new_data = np.diff(data)
+				#new_data = new_data_na[~np.isnan(new_data_na)]
+	            
+	            # Volver a calcular test dicky fuller
+				new_results = adfuller(new_data)
+	            
+	            # Volver a comparar para decidir si es o no estacionaria
+				if new_results[0] < 0 and new_results[1] <= 0.05:
+	                #print('es estacionaria')
+					lags = i
+					break
+	            
+				else:
+					data = new_data
+					#print('no es estacionaria')
+					lags = 3
+	                
+	    # Regresa los datos diferenciados que son estacionarios
+		return lags+1
+	
+	d = check_stationarity_t(data)
+	
+    # lambda para tomar los coef significativos
+	significant_coef = lambda x: x if x>0.5 else None
+	
+    # Calcular coeficientes de fac parcial
+	facp = pacf(data)
+	
+    # Pasar lambda y quitar los que no son significativos
+	p_s = pd.DataFrame(significant_coef(facp[i]) for i in range(len(facp))).dropna()
+	
+    # Tomar el primero que sea signiticativo, sera la p de nuestro modelo
+	p = p_s.index[0] + 1
+
+    # Calcular coeficientes de fac 
+	fac = acf(data, fft=False)
+	
+    # Pasar lambda y quitar los que no son significativos
+	q_s = pd.DataFrame(significant_coef(fac[i]) for i in range(len(fac))).dropna()
+	
+    # Tomar el primero que sea signiticativo, sera la p de nuestro modelo
+	q = q_s.index[0] + 1
+	
+	# Primer modelo
+	print(p,d,q)
+	try:
+		model = ARIMA(data, order=(p,d,q))
+		model_fit = model.fit()
+		
+		# P values de coeficientes de modelo
+		pval = model_fit.pvalues
+	
+		# Akaike Information Criterion
+		m1_aic = model_fit.aic
+		# MA term (q) from partial fac
+		def pval_signif(pval, p, q):		
+			p_s, q_s = [], []
+			for i in range(1, len(pval)):
+				if i<= p:
+					p_s.append(pval[i])
+				else:
+					q_s.append(pval[i])
+			# Ver si son significantes
+			if q_s[-1]>0.5:
+				return p, q-1
+			
+			elif p_s[-1]>0.5:
+				return p-1, q
+			
+			else:
+				return p, q
+		
+		p, q = pval_signif(pval, p, q)
+		# Nuevo modelo
+		new_model = ARIMA(data, order=(p,d,q))
+		new_model_fit = new_model.fit()
+		# Akaike Information Criterion nuevo
+		m2_aic = new_model_fit.aic
+		
+	except:
+		m1_aic, m2_aic = 0, 0
+				
+	return new_model_fit
+	
+	#return pval
+#arima_1 = fit_arima_(time_series[0])
+
+#%%
+from statsmodels.stats.diagnostic import acorr_ljungbox
+def check_resid(model_fit):
+	# estadístico Ljung – Box. 
+	ans = acorr_ljungbox(model_fit.resid, lags=[10])
+	return ans
+
+#temp = check_resid(arima_1)
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+#import statsmodels.api as sm
+
+#x = [1 if i%2 == 0 else 6 for i in range(50)]
+#eta = np.random.normal(0, 0.01, 50)
+#x = x + eta
+#res = sm.tsa.stattools.arma_order_select_ic(x, ic=['aic']) 
+#print(res.aic_min_order)
+#model = sm.tsa.ARMA(x, res.aic_min_order).fit(disp = 0)
+#print model.predict(45, 55)

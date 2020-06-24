@@ -98,8 +98,9 @@ def clean_data_prices(df_data):
         df_data = read_file(ent.path, ent.sheet)
 
 	"""
-	# Make a copy
+	# Hacer copia
 	df = df_data.copy()
+	
 	# Quitar numeros innecesarios
 	def col_no_numb(df):
 		# De las columnas
@@ -116,17 +117,24 @@ def clean_data_prices(df_data):
 	# Nombre de todas las columnas con precios acomodadas correctamente
 	col_df = list(df.columns)[::-1][0:22]
 	
-	# Diferencias
-	#df_dif = df[col_df].diff(axis=1)
-	#df_dif = df[col_df].pct_change(axis=1)
-	
-	#df_new = df[['División', 'Grupo', 'Clase', 'Generico', 'Especificación']]
-	
-	df_new = pd.merge(df[['División', 'Grupo', 'Clase', 'Generico', 'Especificación']], 
-				   df[col_df].pct_change(axis=1).iloc[:,1:], 
+	# Merge ciertas columnas de original con las diferencias
+	df_new = pd.merge(
+						df[['División', 'Grupo', 'Clase', 'Generico', 'Especificación']], 
+						df[col_df].pct_change(axis=1).iloc[:,1:], 
 				   left_index=True, right_index=True)
 	return df_new
 
+def series_tiempo(df_data):
+	# Agrupar por clase
+	clases = list(df_data.groupby('Clase'))
+	# Series de tiempo con promedio de la clase
+	series_tiempo_or = [clases[i][1].mean().rename(clases[i][0], 
+					     inplace=True) for i in range(len(clases))]
+	
+	series_tiempo = [np.asarray(st.reset_index(drop=True)) for st in series_tiempo_or]
+	# del series_tiempo[7]
+	return series_tiempo
+		
 
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Read shape file and storing it in to a DataFrame

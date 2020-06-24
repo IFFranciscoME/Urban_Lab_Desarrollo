@@ -21,10 +21,10 @@ from time import time
 if __name__ == "__main__":
 	
 	# Using function: read_file (original)
-	df_pymes_or = dat.read_file(ent.path_data_pyme, ent.sheet_data_pyme)
+	#df_pymes_or = dat.read_file(ent.path_data_pyme, ent.sheet_data_pyme)
 	
 	# Using function: clean_data
-	df_pymes = dat.clean_data_pymes(df_pymes_or)
+	#df_pymes = dat.clean_data_pymes(df_pymes_or)
 	"""
 	# Using metric_quantification with stress conditions
 	metric_s = pr.metric_quantification(df_pymes, ent.conditions_stress, 'Estres')
@@ -45,12 +45,16 @@ if __name__ == "__main__":
 	# .. ............................................................................... .. #
 	# .. ............................................................................... .. #
 	
+	# Leer base de datos de precios
 	df_prices_or = dat.read_file(ent.path_data_prices, ent.sheet_data_prices)
-	#generico = list(df_prices_or.groupby('Generico'))
-	categorias = list(df_prices_or.groupby('División'))
-	data = categorias[0][1].mean()
 	
+	# limpiar base de datos
+	df_prices = dat.clean_data_prices(df_prices_or)
 	
+	# Fragmentar por series de tiemo
+	time_series = dat.series_tiempo(df_prices)
+	#%%
+	arimas = [ pr.fit_arima_(time_series[i]) for i in range(len(time_series))] 
 	
 	# End time
 	#t1 = time()
