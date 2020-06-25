@@ -15,6 +15,7 @@ import numpy as np
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.stattools import  adfuller
 from statsmodels.tsa.stattools import pacf,acf
+from statsmodels.stats.diagnostic import acorr_ljungbox
 
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Calculate metric
@@ -344,22 +345,63 @@ def fit_arima_(data):
 		# Akaike Information Criterion nuevo
 		m2_aic = new_model_fit.aic
 		
+		return new_model_fit
+		
 	except:
-		m1_aic, m2_aic = 0, 0
+		#m1_aic, m2_aic = 0, 0
+		return np.nan
 				
-	return new_model_fit
-	
+
 	#return pval
 #arima_1 = fit_arima_(time_series[0])
 
-#%%
-from statsmodels.stats.diagnostic import acorr_ljungbox
-def check_resid(model_fit):
-	# estadístico Ljung – Box. 
-	ans = acorr_ljungbox(model_fit.resid, lags=[10])
-	return ans
 
-#temp = check_resid(arima_1)
+def check_resid(model_fit):
+	# estadístico Ljung – Box.
+	colineal = acorr_ljungbox(model_fit.resid, lags=[10])
+	# se necesita aceptar H0, es decir p_value debe ser mayor a .05
+	colin_pv = colineal[1]
+	if colin_pv>0.05: 
+		col = True
+	else:
+		col = False
+	
+	# shapiro test
+	normalidad = shapiro(model_fit.resid)
+	# si el p-value es menor a alpha, rechazamos la hipotesis de normalidad
+	norm_pv = normalidad[1]
+	if norm_pv>0.05: 
+		norm = True
+	else:
+		norm = False
+
+	# arch test
+	heterosced = het_arch(model_fit.resid)
+	# p-value menor a 0.05 y concluir que no hay efecto de heteroscedasticidad
+	hete_pv = heterosced[1]
+	if hete_pv<0.05: 
+		hete = True
+	else:
+		hete = False
+	
+	return col, norm, hete
+#%%
+import warnings
+warnings.filterwarnings('ignore')
+import statsmodels.api as sm
+'''
+data = time_series[2]
+#resDiff = sm.tsa.arma_order_select_ic(data, max_ar=4, max_ma=4, ic='aic', trend='c')
+model_2 = ARIMA(data, order=(1,1,1))
+model_fit_2 = model_2.fit()
+
+model_fit_2.plot_predict(dynamic=False)
+plt.show()
+	
+'''
+
+
+
 	
 	
 	
@@ -370,9 +412,7 @@ def check_resid(model_fit):
 	
 	
 	
-	
-	
-	
+#%%
 #import statsmodels.api as sm
 
 #x = [1 if i%2 == 0 else 6 for i in range(50)]

@@ -53,13 +53,43 @@ if __name__ == "__main__":
 	
 	# Fragmentar por series de tiemo
 	time_series = dat.series_tiempo(df_prices)
-	#%%
-	arimas = [ pr.fit_arima_(time_series[i]) for i in range(len(time_series))] 
 	
+	
+	arimas_or = [ pr.fit_arima_(time_series[i]) for i in range(len(time_series))]
+	arimas = [i for i in arimas_or if str(i) != 'nan']
+	
+	#residuals_1 = pr.check_resid(arimas[0])
+	"""
+	arimas[0].plot_predict(dynamic=False)
+	plt.show()
+	
+	#%%
+	resid_1 = arimas[0].resid
+	plt.plot(resid_1)
+	"""
+	# .--------------------------------------------------------------
+	
+	'''
+	# Calcular modelos de arimas
+	arimas = [ pr.fit_arima_(time_series[i]) for i in range(len(time_series))]
+	
+	
+	del arimas[7]
+	del arimas[9]
+	del arimas[21]
+	del arimas[23]
+	del arimas[24]
+	del arimas[24]
+	
+	
+	resdid = [pr.check_resid(a) for a in arimas]
+	'''
 	# End time
 	#t1 = time()
 	
 	#print('el tiempo transcurrido fue: ' + str(t1-t0))
+	
+	
 	
 	
 	
