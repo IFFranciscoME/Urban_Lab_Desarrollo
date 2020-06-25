@@ -21,10 +21,10 @@ from time import time
 if __name__ == "__main__":
 	
 	# Using function: read_file (original)
-	#df_pymes_or = dat.read_file(ent.path_data_pyme, ent.sheet_data_pyme)
+	df_pymes_or = dat.read_file(ent.path_data_pyme, ent.sheet_data_pyme)
 	
 	# Using function: clean_data
-	#df_pymes = dat.clean_data_pymes(df_pymes_or)
+	df_pymes = dat.clean_data_pymes(df_pymes_or)
 	"""
 	# Using metric_quantification with stress conditions
 	metric_s = pr.metric_quantification(df_pymes, ent.conditions_stress, 'Estres')
@@ -37,15 +37,15 @@ if __name__ == "__main__":
 	fig2 = vs.map_metric(metric_a, 'Adaptabilidad')
 	
 	'''
-	fig.show()
-	fig2.show()
+	#fig.show()
+	#fig2.show()
 	
 	'''
 	"""
 	# .. ............................................................................... .. #
 	# .. ............................................................................... .. #
 	
-	# Leer base de datos de precios
+	# Leer base de datos de precios original
 	df_prices_or = dat.read_file(ent.path_data_prices, ent.sheet_data_prices)
 	
 	# limpiar base de datos
@@ -54,40 +54,15 @@ if __name__ == "__main__":
 	# Fragmentar por series de tiemo
 	time_series = dat.series_tiempo(df_prices)
 	
+	# Todas las arimas
+	arimas_f = pr.all_arimas(df_prices)
 	
-	arimas_or = [ pr.fit_arima_(time_series[i]) for i in range(len(time_series))]
-	arimas = [i for i in arimas_or if str(i) != 'nan']
-	
-	#residuals_1 = pr.check_resid(arimas[0])
-	"""
-	arimas[0].plot_predict(dynamic=False)
-	plt.show()
-	
-	#%%
-	resid_1 = arimas[0].resid
-	plt.plot(resid_1)
-	"""
-	# .--------------------------------------------------------------
-	
-	'''
-	# Calcular modelos de arimas
-	arimas = [ pr.fit_arima_(time_series[i]) for i in range(len(time_series))]
-	
-	
-	del arimas[7]
-	del arimas[9]
-	del arimas[21]
-	del arimas[23]
-	del arimas[24]
-	del arimas[24]
-	
-	
-	resdid = [pr.check_resid(a) for a in arimas]
 	'''
 	# End time
 	#t1 = time()
 	
 	#print('el tiempo transcurrido fue: ' + str(t1-t0))
+	'''
 	
 	
 	

@@ -78,6 +78,7 @@ def clean_data_pymes(df_data):
 
 	return df
 
+
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Cleaning Database that is in a DataFrame
 # -- ------------------------------------------------------------------------------------ -- #
@@ -118,12 +119,6 @@ def clean_data_prices(df_data):
 	col_df = list(df.columns)[::-1][0:22]
 	
 	# Merge ciertas columnas de original con las diferencias
-	'''
-	df_new = pd.merge(
-						df[['División', 'Grupo', 'Clase', 'Generico', 'Especificación']], 
-						df[col_df].pct_change(axis=1).iloc[:,1:], 
-				   left_index=True, right_index=True)
-	'''
 	df_new = pd.merge(
 						df[['División', 'Grupo', 'Clase', 'Generico', 'Especificación']], 
 						df[col_df].iloc[:,1:], 
@@ -141,8 +136,6 @@ def series_tiempo(df_data):
 	series_tiempo_or = [clases[i][1].mean().rename(clases[i][0], 
 					     inplace=True) for i in range(len(clases))]
 	
-	#series_tiempo = [np.asarray(st.reset_index(drop=True)) for st in series_tiempo_or]
-	# del series_tiempo[7]
 	return series_tiempo_or
 		
 
