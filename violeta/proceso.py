@@ -26,7 +26,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 
 
-
+#%%
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Calculate metric
 # -- ------------------------------------------------------------------------------------ -- #
@@ -146,212 +146,6 @@ def type_verification(condition, result, data):
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: According with condition in dict
 # -- ------------------------------------------------------------------------------------ -- #
-def fit_arima(data):
-	"""
-    Parameters
-    ---------
-    :param:
-        condition: tuple or list : contiene las condiciones
-		
-    Returns
-    ---------
-    :return:
-        answer: int : numero de la metrica
-
-    Debuggin
-    ---------
-        condition = (0, 25)
-		
-	"""
-	
-	def check_stationarity_t(data):
-	    # Usar dicky fuller
-		test_results = adfuller(data)
-	    
-	    # Cuando se cumple esto es estacionaria la serie orginal
-		if test_results[0] < 0 and test_results[1] <= 0.05:
-			lags = 0
-			new_data = data
-        
-		# Cuando no se cumple se debe diferenciar para que sea estacionaria
-		else:
-			
-			for i in range(3):
-	            
-	            # Diferenciar datos
-				new_data = np.diff(data)
-				#new_data = new_data_na[~np.isnan(new_data_na)]
-	            
-	            # Volver a calcular test dicky fuller
-				new_results = adfuller(new_data)
-	            
-	            # Volver a comparar para decidir si es o no estacionaria
-				if new_results[0] < 0 and new_results[1] <= 0.05:
-	                #print('es estacionaria')
-					lags = i
-					break
-	            
-				else:
-					data = new_data
-					#print('no es estacionaria')
-					lags = 3
-	                
-	    # Regresa los datos diferenciados que son estacionarios
-		return lags+1
-	
-	d = check_stationarity_t(data)
-	
-    # lambda para tomar los coef significativos
-	significant_coef = lambda x: x if x>0.5 else None
-	
-    # Calcular coeficientes de fac parcial
-	facp = pacf(data)
-	
-    # Pasar lambda y quitar los que no son significativos
-	p_s = pd.DataFrame(significant_coef(facp[i]) for i in range(len(facp))).dropna()
-	
-    # Tomar el primero que sea signiticativo, sera la p de nuestro modelo
-	p = p_s.index[0]
-	
-	# --- #
-	
-    # Calcular coeficientes de fac 
-	fac = acf(data, fft=False)
-	
-    # Pasar lambda y quitar los que no son significativos
-	q_s = pd.DataFrame(significant_coef(fac[i]) for i in range(len(fac))).dropna()
-	
-    # Tomar el primero que sea signiticativo, sera la p de nuestro modelo
-	q = q_s.index[0]
-	
-	# Primer modelo
-	print(p, d, q)
-	try:
-		model = ARIMA(data, order=(p,d,q))
-		model_fit = model.fit()
-		
-		# P values de coeficientes de modelo
-		pval = model_fit.pvalues
-		
-		# Funcion que checa la significancia de los coeficientes de MA y AR
-		def pval_signif(pval, p, q):		
-			p_s, q_s = [], []
-			for i in range(1, len(pval)):
-				if i<= p:
-					p_s.append(pval[i])
-				else:
-					q_s.append(pval[i])
-			# Ver si son significantes
-			if q_s[-1]>0.5:
-				return p, q-1
-			
-			elif p_s[-1]>0.5:
-				return p-1, q
-			
-			else:
-				return p, q
-		
-		p, q = pval_signif(pval, p, q)
-		
-		# Nuevo modelo
-		new_model = ARIMA(data, order=(p,d,q))
-		new_model_fit = new_model.fit()
-
-		
-		def check_resid(model_fit):
-			# estadístico Ljung – Box.
-			colineal = acorr_ljungbox(model_fit.resid, lags=[10])
-			# se necesita aceptar H0, es decir p_value debe ser mayor a .05
-			colin_pv = colineal[1]
-			if colin_pv>0.05: 
-				col = True
-			else:
-				col = False
-			
-			# shapiro test
-			normalidad = shapiro(model_fit.resid)
-			# si el p-value es menor a alpha, rechazamos la hipotesis de normalidad
-			norm_pv = normalidad[1]
-			if norm_pv>0.05: 
-				norm = True
-			else:
-				norm = False
-		
-			# arch test
-			heterosced = het_arch(model_fit.resid)
-			# p-value menor a 0.05 y concluir que no hay efecto de heteroscedasticidad
-			hete_pv = heterosced[1]
-			if hete_pv<0.05: 
-				hete = True
-			else:
-				hete = False
-			
-			return col, norm, hete
-
-		
-		return new_model_fit
-		
-	except:
-
-		return np.nan
-				
-
-# -- ------------------------------------------------------------------------------------ -- #
-# -- Function: Calcular modelos arimas de todas las series de tiempo
-# -- ------------------------------------------------------------------------------------ -- #
-def all_arimas(df_prices):
-	"""
-    Parameters
-    ---------
-    :param:
-        condition: tuple or list : contiene las condiciones
-		
-    Returns
-    ---------
-    :return:
-        answer: int : numero de la metrica
-
-    Debuggin
-    ---------
-        condition = (0, 25)
-	"""
-    # Fragmentar por series de tiemo
-	time_series = dat.series_tiempo(df_prices)
-
-    # Nombres de clases
-	clases = list(df_prices.groupby('Generico'))
-
-	arimas_or, st = [], []
-    # Intentar calcular arimas
-	for i in range(len(time_series)):
-		arimas_or.append(fit_arima(time_series[i]))
-		st.append(clases[i][0])
-
-	arimas = [[st[i], arimas_or[i]] for i in range(len(arimas_or)
-						) if str(arimas_or[i]) != 'nan']
-	return arimas
-
-
-# -- ------------------------------------------------------------------------------------ -- #
-# -- Function: Calcular modelos arimas de todas las series de tiempo
-# -- ------------------------------------------------------------------------------------ -- #
-def forecast(model_fitted, serie_tiempo):
-		# Predecir
-		fc, se, conf = model_fitted.forecast(6, alpha=0.05)
-		# Dataframe
-		forecast = pd.DataFrame(fc)
-		new_ind = ['jun 2020', 'jul 2020', 'ago 2020', 'sep 2020', 'oct 2020', 'nov 2020']
-		# set index
-		forecast.index = new_ind
-		
-		result = pd.concat([serie_tiempo, forecast], ignore_index=False, sort=False)
-		
-		return result
-	
-#%%
-#data = time_series[228]
-
-
 def f_predict(p_serie_tiempo):
 	
 	# meses en el futuro, predecir
@@ -382,17 +176,12 @@ def f_predict(p_serie_tiempo):
 	r_2 = r2_score(y, y_pred)
 	
 	if r_2 > 0.8:
-		"""
-		plt.scatter(x, y)
-		plt.plot(x, y_pred, color='red')
-		plt.show()
-		"""
 		# sumar a la x ultima
 		value = x_o[-1]+meses
 		# predecir
 		prediction = modelo.predict(value.reshape((1,1)))
 		
-		return prediction[0][0]
+		return [p_serie_tiempo[len(p_serie_tiempo)-1], prediction[0][0]]
 	
 	else: 
 	# ------------------------------------------ #
@@ -431,19 +220,54 @@ def f_predict(p_serie_tiempo):
 		d = check_stationarity(p_serie_tiempo)
 		
 		if np.isnan(d):
-			return 'Aún no se puede'
+			return [p_serie_tiempo[len(p_serie_tiempo)-1]]
 		
 		else:
-		
-			# Busqueda en malla para sacar el menor aic
-			p_q_search = sm.tsa.arma_order_select_ic(p_serie_tiempo, max_ar=2, max_ma=2, ic='aic')
 			
-			# Orden minimo de acuerdo a aic
-			p_q = p_q_search.aic_min_order
+			# lambda para tomar los coef significativos
+			all_significant_coef = lambda x: x if abs(x)>0.5 else None
+			
+			def significat_lag(all_coef):
+				# Tomar los indices de los rezagos
+				ind_c = all_coef.index.values
+				# Solo los rezagos menores a 7
+				sig_i = ind_c[ind_c<7]
+				# Nuevos coeficientes
+				new_coef = all_coef[all_coef.index.isin(list(sig_i))]
+				if len(new_coef) > 1:
+					# Tomar los valores absolutos
+					abs_coef = new_coef[1:].abs()
+					# Buscar el maximo
+					max_coef = abs_coef.max()
+					# El indice es el rezago al que pertenece
+					answer = abs_coef[abs_coef == max_coef[0]].dropna().index[0]
+					return answer
+				else:
+					return 1
+			
+		    # Calcular coeficientes de fac parcial
+			facp = sm.tsa.stattools.pacf(p_serie_tiempo)
+			
+		    # Pasar lambda y quitar los que no son significativos
+			p_s = pd.DataFrame(all_significant_coef(facp[i]) for i in range(len(facp))).dropna()
+			
+		    # Tomar el primero que sea signiticativo, sera la p de nuestro modelo
+			p = significat_lag(p_s)
+			
+			# --- #
+			
+		    # Calcular coeficientes de fac 
+			fac = sm.tsa.stattools.acf(p_serie_tiempo, fft=False)
+			
+		    # Pasar lambda y quitar los que no son significativos
+			q_s = pd.DataFrame(all_significant_coef(fac[i]) for i in range(len(fac))).dropna()
+			
+		    # Tomar el primero que sea signiticativo, sera la p de nuestro modelo
+			q = significat_lag(q_s)
 			
 			# Modelo
 			arima = sm.tsa.statespace.SARIMAX(p_serie_tiempo,
-									 order=(p_q[0],d,p_q[1]),
+									 order=(p,d,q),
 									 trend = 'c',
 									 enforce_stationarity=True, 
 									 enforce_invertibility=True)
@@ -469,28 +293,14 @@ def f_predict(p_serie_tiempo):
 			
 			# predecir siguientes 6 meses
 			future_prices = arima_fitted.forecast(meses, alpha=0.05)
-			# nombrar indice de acuerdo a los meses
-			future_prices.index = ['jun 2020', 'jul 2020', 'ago 2020', 
-								  'sep 2020', 'oct 2020', 'nov 2020']
-			
-			# juntar la serie de tiempo con la prediccion
-			result = pd.concat([p_serie_tiempo, future_prices], 
-								  ignore_index=False, sort=False)
-			return result[-1]
-		
 
-#regresiones = [f_predict(time_series[s]) for s in range(266) ]
-#arima = f_predict(time_series[0])
+			return [p_serie_tiempo[len(p_serie_tiempo)-1],
+						  future_prices[len(p_serie_tiempo) + meses - 1]]
+
+
+	
 #%%
 
+	
 
-
-
-
-"""
-plt.plot(result, '-r')
-plt.scatter(x, time_series[0])
-plt.show()
-
-"""
 

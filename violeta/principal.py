@@ -51,32 +51,28 @@ if __name__ == "__main__":
 	
 	# limpiar base de datos
 	df_prices = dat.clean_data_prices(df_prices_or)
-	#%%
+	
 	# Fragmentar por series de tiemo
 	time_series = dat.series_tiempo(df_prices)
-	#%%
-	#plot series
-	ts = 1
-	#arima = pr.fit_arima(time_series[ts])
-	arimas = [pr.fit_arima(s) for s in time_series]
-	time_series[ts].plot()
-	#%%
-	# Todas las arimas
-	#arimas_f = pr.all_arimas(df_prices)
 	
-	#%%
-	"""
-	st = 12
-	result = pr.forecast(arimas_f[st][1], time_series[st])
+	# Predictions
+	predictions = [pr.f_predict(time_series[s]) for s in range(len(time_series))]
 	
-	#import matplotlib.pyplot as plt
-	plt.plot(time_series[st])
-	#arimas_f[st][1].plot_predict(dynamic=False)
-	plt.plot(result[-7:])
-	plt.xticks(rotation=90)
-	plt.show()
-	"""
+	# Linea recta -> 228
+	dif, no_info = [], []
+	i = 0
+	for numb in predictions:
+		if len(numb) == 2:
+			dif.append(numb[1] - numb[0])
+		else:
+			no_info.append(i)
+		i+=1
 	
+	# Checar singularidades
+	n = 13
+	time_series[no_info[n]].plot()
+	plt.title(time_series[no_info[n]].name)
+		
 	'''
 	# End time
 	#t1 = time()
