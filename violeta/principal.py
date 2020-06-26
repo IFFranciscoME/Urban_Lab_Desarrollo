@@ -14,6 +14,7 @@ import datos as dat
 import entradas as ent
 import visualizaciones as vs
 from time import time
+import matplotlib.pyplot as plt
 
 # Start time
 #t0 = time()
@@ -50,12 +51,31 @@ if __name__ == "__main__":
 	
 	# limpiar base de datos
 	df_prices = dat.clean_data_prices(df_prices_or)
-	
+	#%%
 	# Fragmentar por series de tiemo
 	time_series = dat.series_tiempo(df_prices)
-	
+	#%%
+	#plot series
+	ts = 1
+	#arima = pr.fit_arima(time_series[ts])
+	arimas = [pr.fit_arima(s) for s in time_series]
+	time_series[ts].plot()
+	#%%
 	# Todas las arimas
-	arimas_f = pr.all_arimas(df_prices)
+	#arimas_f = pr.all_arimas(df_prices)
+	
+	#%%
+	"""
+	st = 12
+	result = pr.forecast(arimas_f[st][1], time_series[st])
+	
+	#import matplotlib.pyplot as plt
+	plt.plot(time_series[st])
+	#arimas_f[st][1].plot_predict(dynamic=False)
+	plt.plot(result[-7:])
+	plt.xticks(rotation=90)
+	plt.show()
+	"""
 	
 	'''
 	# End time
@@ -64,6 +84,12 @@ if __name__ == "__main__":
 	#print('el tiempo transcurrido fue: ' + str(t1-t0))
 	'''
 	
+	
+	
+	
+	
+		
+		
 	
 	
 	

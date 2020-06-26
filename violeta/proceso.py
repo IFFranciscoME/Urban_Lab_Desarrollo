@@ -15,12 +15,15 @@ import numpy as np
 import datos as dat
 import warnings
 warnings.filterwarnings('ignore')
-from statsmodels.tsa.arima_model import ARIMA
-from statsmodels.tsa.stattools import pacf,acf
-from statsmodels.tsa.stattools import  adfuller
-from statsmodels.stats.diagnostic import acorr_ljungbox
-from statsmodels.stats.diagnostic import het_arch
+import statsmodels.api as sm
 from scipy.stats import shapiro
+
+from statsmodels.stats.diagnostic import het_arch
+from statsmodels.stats.diagnostic import acorr_ljungbox
+
+from sklearn import linear_model
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
 
 
 
@@ -143,10 +146,25 @@ def type_verification(condition, result, data):
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: According with condition in dict
 # -- ------------------------------------------------------------------------------------ -- #
-def fit_arima_(data):
+def fit_arima(data):
+	"""
+    Parameters
+    ---------
+    :param:
+        condition: tuple or list : contiene las condiciones
+		
+    Returns
+    ---------
+    :return:
+        answer: int : numero de la metrica
+
+    Debuggin
+    ---------
+        condition = (0, 25)
+		
+	"""
 	
 	def check_stationarity_t(data):
-		  
 	    # Usar dicky fuller
 		test_results = adfuller(data)
 	    
@@ -193,7 +211,7 @@ def fit_arima_(data):
 	p_s = pd.DataFrame(significant_coef(facp[i]) for i in range(len(facp))).dropna()
 	
     # Tomar el primero que sea signiticativo, sera la p de nuestro modelo
-	p = p_s.index[0] + 1
+	p = p_s.index[0]
 	
 	# --- #
 	
@@ -204,18 +222,16 @@ def fit_arima_(data):
 	q_s = pd.DataFrame(significant_coef(fac[i]) for i in range(len(fac))).dropna()
 	
     # Tomar el primero que sea signiticativo, sera la p de nuestro modelo
-	q = q_s.index[0] + 1
+	q = q_s.index[0]
 	
 	# Primer modelo
+	print(p, d, q)
 	try:
 		model = ARIMA(data, order=(p,d,q))
 		model_fit = model.fit()
 		
 		# P values de coeficientes de modelo
 		pval = model_fit.pvalues
-	
-		# Akaike Information Criterion 
-		# m1_aic = model_fit.aic
 		
 		# Funcion que checa la significancia de los coeficientes de MA y AR
 		def pval_signif(pval, p, q):		
@@ -240,65 +256,241 @@ def fit_arima_(data):
 		# Nuevo modelo
 		new_model = ARIMA(data, order=(p,d,q))
 		new_model_fit = new_model.fit()
+
 		
-		# Akaike Information Criterion nuevo
-		#m2_aic = new_model_fit.aic
+		def check_resid(model_fit):
+			# estadístico Ljung – Box.
+			colineal = acorr_ljungbox(model_fit.resid, lags=[10])
+			# se necesita aceptar H0, es decir p_value debe ser mayor a .05
+			colin_pv = colineal[1]
+			if colin_pv>0.05: 
+				col = True
+			else:
+				col = False
+			
+			# shapiro test
+			normalidad = shapiro(model_fit.resid)
+			# si el p-value es menor a alpha, rechazamos la hipotesis de normalidad
+			norm_pv = normalidad[1]
+			if norm_pv>0.05: 
+				norm = True
+			else:
+				norm = False
+		
+			# arch test
+			heterosced = het_arch(model_fit.resid)
+			# p-value menor a 0.05 y concluir que no hay efecto de heteroscedasticidad
+			hete_pv = heterosced[1]
+			if hete_pv<0.05: 
+				hete = True
+			else:
+				hete = False
+			
+			return col, norm, hete
+
 		
 		return new_model_fit
 		
 	except:
-		#m1_aic, m2_aic = 0, 0
+
 		return np.nan
 				
 
-
-def check_resid(model_fit):
-	# estadístico Ljung – Box.
-	colineal = acorr_ljungbox(model_fit.resid, lags=[10])
-	# se necesita aceptar H0, es decir p_value debe ser mayor a .05
-	colin_pv = colineal[1]
-	if colin_pv>0.05: 
-		col = True
-	else:
-		col = False
-	
-	# shapiro test
-	normalidad = shapiro(model_fit.resid)
-	# si el p-value es menor a alpha, rechazamos la hipotesis de normalidad
-	norm_pv = normalidad[1]
-	if norm_pv>0.05: 
-		norm = True
-	else:
-		norm = False
-
-	# arch test
-	heterosced = het_arch(model_fit.resid)
-	# p-value menor a 0.05 y concluir que no hay efecto de heteroscedasticidad
-	hete_pv = heterosced[1]
-	if hete_pv<0.05: 
-		hete = True
-	else:
-		hete = False
-	
-	return col, norm, hete
-
-
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: Calcular modelos arimas de todas las series de tiempo
+# -- ------------------------------------------------------------------------------------ -- #
 def all_arimas(df_prices):
+	"""
+    Parameters
+    ---------
+    :param:
+        condition: tuple or list : contiene las condiciones
+		
+    Returns
+    ---------
+    :return:
+        answer: int : numero de la metrica
+
+    Debuggin
+    ---------
+        condition = (0, 25)
+	"""
     # Fragmentar por series de tiemo
-    time_series = dat.series_tiempo(df_prices)
+	time_series = dat.series_tiempo(df_prices)
 
     # Nombres de clases
-    clases = list(df_prices.groupby('Clase'))
+	clases = list(df_prices.groupby('Generico'))
 
-    arimas_or, st = [], []
+	arimas_or, st = [], []
     # Intentar calcular arimas
-    for i in range(len(time_series)):
-        arimas_or.append(fit_arima_(time_series[i]))
-        st.append(clases[i][0])
+	for i in range(len(time_series)):
+		arimas_or.append(fit_arima(time_series[i]))
+		st.append(clases[i][0])
 
-    arimas = [[st[i], arimas_or[i]] for i in range(len(arimas_or)) if str(arimas_or[i]) != 'nan']
-    return arimas
+	arimas = [[st[i], arimas_or[i]] for i in range(len(arimas_or)
+						) if str(arimas_or[i]) != 'nan']
+	return arimas
 
-#arimas_f = all_arimas(df_prices)
 
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: Calcular modelos arimas de todas las series de tiempo
+# -- ------------------------------------------------------------------------------------ -- #
+def forecast(model_fitted, serie_tiempo):
+		# Predecir
+		fc, se, conf = model_fitted.forecast(6, alpha=0.05)
+		# Dataframe
+		forecast = pd.DataFrame(fc)
+		new_ind = ['jun 2020', 'jul 2020', 'ago 2020', 'sep 2020', 'oct 2020', 'nov 2020']
+		# set index
+		forecast.index = new_ind
+		
+		result = pd.concat([serie_tiempo, forecast], ignore_index=False, sort=False)
+		
+		return result
+	
+#%%
+#data = time_series[228]
+
+
+def f_predict(p_serie_tiempo):
+	
+	# meses en el futuro, predecir
+	meses = 6
+	
+	# ------------------------------------------ #
+	# Primero intentar con una regresión lineal
+	# ------------------------------------------ #
+	
+	# Separar la informacion que se tiene de la serie de tiempo en y
+	y_o = np.array(p_serie_tiempo)
+	x_o = np.arange(len(p_serie_tiempo))
+	
+	# Acomodarla de la forma que el modelo necesita
+	x = x_o.reshape((len(x_o),1))
+	y = y_o.reshape((len(y_o),1))
+	
+	# Crear el modelo
+	modelo = linear_model.LinearRegression()
+	
+	# Pasar nuestros datos por el modelo
+	modelo.fit(x, y)
+	
+	# De acuerdo al modelo, calcular y
+	y_pred = modelo.predict(x)
+	
+	# R2 de sus residuales
+	r_2 = r2_score(y, y_pred)
+	
+	if r_2 > 0.8:
+		"""
+		plt.scatter(x, y)
+		plt.plot(x, y_pred, color='red')
+		plt.show()
+		"""
+		# sumar a la x ultima
+		value = x_o[-1]+meses
+		# predecir
+		prediction = modelo.predict(value.reshape((1,1)))
+		
+		return prediction[0][0]
+	
+	else: 
+	# ------------------------------------------ #
+	# Segundo intentar modelar con SARIMA
+	# ------------------------------------------ #
+	
+	# Empezar checando si es estacionaria
+		def check_stationarity(data):
+		    # Usar dicky fuller
+			test_results = sm.tsa.stattools.adfuller(data)
+		    # Cuando se cumple esto es estacionaria la serie orginal
+			if test_results[0] < 0 and test_results[1] <= 0.05:
+				lags = 0
+	        
+			# Cuando no se cumple se debe diferenciar para que sea estacionaria
+			else:
+				for i in range(3):
+		            # Diferenciar datos
+					new_data = np.diff(data)
+		            
+		            # Volver a calcular test dicky fuller
+					new_results = sm.tsa.stattools.adfuller(new_data)
+		            
+		            # Volver a comparar para decidir si es o no estacionaria
+					if new_results[0] < 0 and new_results[1] <= 0.05:
+						# rezagos necesarios para volverlo estacionario
+						lags = i
+						break
+		            
+					else:
+						data = new_data
+						# solo permitimos 3 rezagos, si aún no lo es, no se modela
+						lags = np.nan
+			return lags
+		# Checar estacionariedad
+		d = check_stationarity(p_serie_tiempo)
+		
+		if np.isnan(d):
+			return 'Aún no se puede'
+		
+		else:
+		
+			# Busqueda en malla para sacar el menor aic
+			p_q_search = sm.tsa.arma_order_select_ic(p_serie_tiempo, max_ar=2, max_ma=2, ic='aic')
+			
+			# Orden minimo de acuerdo a aic
+			p_q = p_q_search.aic_min_order
+			
+			# Modelo
+			arima = sm.tsa.statespace.SARIMAX(p_serie_tiempo,
+									 order=(p_q[0],d,p_q[1]),
+									 trend = 'c',
+									 enforce_stationarity=True, 
+									 enforce_invertibility=True)
+			arima_fitted = arima.fit()
+			
+			def check_resid(model_fit):
+				# estadístico Ljung – Box.
+				colineal = acorr_ljungbox(model_fit.resid, lags=[10])
+				# se necesita aceptar H0, es decir p_value debe ser mayor a .05
+				colin = True if colineal[1]>0.05 else False
+				
+				# shapiro test
+				normalidad = shapiro(model_fit.resid)
+				# si el p-value es menor a alpha, rechazamos la hipotesis de normalidad
+				norm = True if normalidad[1]>0.05 else False
+			
+				# arch test
+				heterosced = het_arch(model_fit.resid)
+				# p-value menor a 0.05 y concluir que no hay efecto de heteroscedasticidad
+				heter = True if heterosced[1]>0.05 else False
+				
+				return colin, norm, heter
+			
+			# predecir siguientes 6 meses
+			future_prices = arima_fitted.forecast(meses, alpha=0.05)
+			# nombrar indice de acuerdo a los meses
+			future_prices.index = ['jun 2020', 'jul 2020', 'ago 2020', 
+								  'sep 2020', 'oct 2020', 'nov 2020']
+			
+			# juntar la serie de tiempo con la prediccion
+			result = pd.concat([p_serie_tiempo, future_prices], 
+								  ignore_index=False, sort=False)
+			return result[-1]
+		
+
+#regresiones = [f_predict(time_series[s]) for s in range(266) ]
+#arima = f_predict(time_series[0])
+#%%
+
+
+
+
+
+"""
+plt.plot(result, '-r')
+plt.scatter(x, time_series[0])
+plt.show()
+
+"""
 

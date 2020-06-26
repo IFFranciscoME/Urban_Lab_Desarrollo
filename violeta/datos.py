@@ -131,9 +131,9 @@ def clean_data_prices(df_data):
 # -- ------------------------------------------------------------------------------------ -- #
 def series_tiempo(df_data):
 	# Agrupar por clase
-	clases = list(df_data.groupby('Clase'))
+	clases = list(df_data.groupby('Generico'))
 	# Series de tiempo con promedio de la clase
-	series_tiempo_or = [clases[i][1].mean().rename(clases[i][0], 
+	series_tiempo_or = [clases[i][1].median().rename(clases[i][0], 
 					     inplace=True) for i in range(len(clases))]
 	
 	return series_tiempo_or
