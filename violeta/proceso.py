@@ -25,8 +25,6 @@ from sklearn import linear_model
 from sklearn.metrics import r2_score
 
 
-
-#%%
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Calculate metric
 # -- ------------------------------------------------------------------------------------ -- #
@@ -348,6 +346,24 @@ def predict_clase(df_prices, clase):
 # -- Function: According with condition in dict
 # -- ------------------------------------------------------------------------------------ -- #
 def semaforo_precios(df_prices):
+	"""
+    Parameters
+    ---------
+    :param:
+        df_data: DataFrame : datos limpios de precios
+		p_clase: str : clase que se requieren la prediccion
+
+    Returns
+    ---------
+    :return:
+        med_predict: float : porcentaje medio de la clase
+
+    Debuggin
+    ---------
+        df_data = df_prices
+		p_clase = 'Accesorios y utensilios'
+		
+	"""
 	# Clases del dataframe por grupo
 	grupo_clases = dat.clases(df_prices)
 		
@@ -369,7 +385,11 @@ def semaforo_precios(df_prices):
 			result = 'rojo'
 		else:
 			result = 'amarillo'
-		semaforo[grupo_clases[i][0]] = [result]
+		semaforo[grupo_clases[i][0]] = [result, round(mean_group*100, 3)]
 	return semaforo.T
+
+#%%
+
+
 
 
