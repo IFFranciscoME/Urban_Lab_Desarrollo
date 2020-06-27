@@ -14,6 +14,9 @@ import datos as dat
 import entradas as ent
 import visualizaciones as vs
 from time import time
+import warnings
+warnings.filterwarnings('ignore')
+import dash_bootstrap_components as dbc
 
 # Start time
 #t0 = time()
@@ -25,6 +28,7 @@ if __name__ == "__main__":
 	
 	# Using function: clean_data
 	df_pymes = dat.clean_data_pymes(df_pymes_or)
+	
 	"""
 	# Using metric_quantification with stress conditions
 	metric_s = pr.metric_quantification(df_pymes, ent.conditions_stress, 'Estres')
@@ -53,8 +57,6 @@ if __name__ == "__main__":
 	
 	# Semaforo
 	semaforo = pr.semaforo_precios(df_prices)
-	
-
 	
 			
 	'''
