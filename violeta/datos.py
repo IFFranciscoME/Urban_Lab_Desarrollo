@@ -127,16 +127,71 @@ def clean_data_prices(df_data):
 
 
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Function: Cleaning Database that is in a DataFrame
+# -- Function: Separar series de tiempo del data frame de series de tiempo
 # -- ------------------------------------------------------------------------------------ -- #
-def series_tiempo(df_data):
+def series_tiempo(df_data, p_clase):
+	"""
+    Parameters
+    ---------
+    :param:
+        df_data: DataFrame : data en un DF
+		p_clase: str : clase que se requieren los productos
+
+    Returns
+    ---------
+    :return:
+        series_tiempo: list : todas las series de tiempo
+
+    Debuggin
+    ---------
+        df_data = df_prices
+		p_clase = 'Accesorios y utensilios'
+
+	"""
 	# Agrupar por clase
-	clases = list(df_data.groupby('Generico'))
-	# Series de tiempo con promedio de la clase
-	series_tiempo_or = [clases[i][1].median().rename(clases[i][0], 
-					     inplace=True) for i in range(len(clases))]
+	clases = list(df_data.groupby('Clase'))
 	
-	return series_tiempo_or
+	# Busqueda de dataframe para la clase que se necesita
+	search = [clases[i][1] for i in range(len(clases)) if clases[i][0]==p_clase][0]
+	search.reset_index(inplace=True, drop=True)
+	
+	# Agrupar por generico
+	generico = list(search.groupby('Generico'))
+	
+	# Series de tiempo por Generico
+	series_tiempo = [generico[i][1].median().rename(generico[i][0], 
+					     inplace=True) for i in range(len(generico))]
+	
+	return series_tiempo
+
+
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: lista de grupos con cada clase de productos
+# -- ------------------------------------------------------------------------------------ -- #
+def clases(df_prices):
+	"""
+    Parameters
+    ---------
+    :param:
+        df_data: DataFrame : data en un DF
+		p_clase: str : clase que se requieren los productos
+
+    Returns
+    ---------
+    :return:
+        series_tiempo: list : todas las series de tiempo de productos de la clase
+
+    Debuggin
+    ---------
+        df_data = df_prices
+		p_clase = 'Accesorios y utensilios'
+
+	"""
+	# Separar por grupo
+	group_by_group = list(df_prices.groupby('Grupo'))
+	# lista por grupo y clases por grupo
+	list_clases = [[grupo[0], grupo[1]['Clase'].unique().tolist()] for grupo in group_by_group]
+	return list_clases
 		
 
 # -- ------------------------------------------------------------------------------------ -- #

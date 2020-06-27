@@ -14,7 +14,6 @@ import datos as dat
 import entradas as ent
 import visualizaciones as vs
 from time import time
-import matplotlib.pyplot as plt
 
 # Start time
 #t0 = time()
@@ -52,33 +51,21 @@ if __name__ == "__main__":
 	# limpiar base de datos
 	df_prices = dat.clean_data_prices(df_prices_or)
 	
-	# Fragmentar por series de tiemo
-	time_series = dat.series_tiempo(df_prices)
+	# Semaforo
+	semaforo = pr.semaforo_precios(df_prices)
 	
-	# Predictions
-	predictions = [pr.f_predict(time_series[s]) for s in range(len(time_series))]
+
 	
-	# Linea recta -> 228
-	dif, no_info = [], []
-	i = 0
-	for numb in predictions:
-		if len(numb) == 2:
-			dif.append(numb[1] - numb[0])
-		else:
-			no_info.append(i)
-		i+=1
-	
-	# Checar singularidades
-	n = 13
-	time_series[no_info[n]].plot()
-	plt.title(time_series[no_info[n]].name)
-		
+			
 	'''
+
 	# End time
 	#t1 = time()
 	
 	#print('el tiempo transcurrido fue: ' + str(t1-t0))
 	'''
+	
+
 	
 	
 	

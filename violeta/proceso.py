@@ -15,15 +15,15 @@ import numpy as np
 import datos as dat
 import warnings
 warnings.filterwarnings('ignore')
+
 import statsmodels.api as sm
 from scipy.stats import shapiro
-
+import statistics
 from statsmodels.stats.diagnostic import het_arch
 from statsmodels.stats.diagnostic import acorr_ljungbox
-
 from sklearn import linear_model
-from sklearn.metrics import mean_squared_error, r2_score
-import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
+
 
 
 #%%
@@ -151,6 +151,9 @@ def f_predict(p_serie_tiempo):
 	# meses en el futuro, predecir
 	meses = 6
 	
+	# Ultimo precio
+	ultimo_precio = p_serie_tiempo[len(p_serie_tiempo)-1]
+	
 	# ------------------------------------------ #
 	# Primero intentar con una regresión lineal
 	# ------------------------------------------ #
@@ -175,13 +178,15 @@ def f_predict(p_serie_tiempo):
 	# R2 de sus residuales
 	r_2 = r2_score(y, y_pred)
 	
-	if r_2 > 0.8:
+	if r_2 > 0.85:
 		# sumar a la x ultima
 		value = x_o[-1]+meses
 		# predecir
 		prediction = modelo.predict(value.reshape((1,1)))
+		# cambio porcentual
+		cambio_porc = (ultimo_precio - prediction[0][0])/ultimo_precio
 		
-		return [p_serie_tiempo[len(p_serie_tiempo)-1], prediction[0][0]]
+		return cambio_porc
 	
 	else: 
 	# ------------------------------------------ #
@@ -220,7 +225,7 @@ def f_predict(p_serie_tiempo):
 		d = check_stationarity(p_serie_tiempo)
 		
 		if np.isnan(d):
-			return [p_serie_tiempo[len(p_serie_tiempo)-1]]
+			return 0
 		
 		else:
 			
@@ -293,14 +298,78 @@ def f_predict(p_serie_tiempo):
 			
 			# predecir siguientes 6 meses
 			future_prices = arima_fitted.forecast(meses, alpha=0.05)
+			
+			# Prediccion
+			prediction = future_prices[len(p_serie_tiempo) + meses - 1]
+			
+			cambio_porc = (ultimo_precio - prediction)/ultimo_precio
+			
+			if abs(cambio_porc) > 0.4:
+				return np.nan
+			else:
+				return cambio_porc
 
-			return [p_serie_tiempo[len(p_serie_tiempo)-1],
-						  future_prices[len(p_serie_tiempo) + meses - 1]]
 
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: According with condition in dict
+# -- ------------------------------------------------------------------------------------ -- #
+def predict_clase(df_prices, clase):	
+	"""
+    Parameters
+    ---------
+    :param:
+        df_data: DataFrame : datos limpios de precios
+		p_clase: str : clase que se requieren la prediccion
 
+    Returns
+    ---------
+    :return:
+        med_predict: float : porcentaje medio de la clase
+
+    Debuggin
+    ---------
+        df_data = df_prices
+		p_clase = 'Accesorios y utensilios'
+		
+	"""
+	# Fragmentar por series de tiemo
+	time_series = dat.series_tiempo(df_prices, clase)
 	
-#%%
-
+	# Predicciones de la clase (por producto)
+	predictions = [f_predict(time_series[s]) for s in range(len(time_series))]
 	
+	# mediana
+	med_predict = pd.DataFrame(predictions).mean()
+		
+	return med_predict[0]
+
+
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: According with condition in dict
+# -- ------------------------------------------------------------------------------------ -- #
+def semaforo_precios(df_prices):
+	# Clases del dataframe por grupo
+	grupo_clases = dat.clases(df_prices)
+		
+	# Solo nombres de clases
+	clases_all = [[grupo_clases[i][1][j] for j in range(len(
+									grupo_clases[i][1]))] for i in range(len(grupo_clases))]
+		
+	# Medias de predicciones
+	predictions = [[predict_clase(df_prices, clases_all[i][j]
+						) for j in range(len(clases_all[i]))] for i in range(len(clases_all))]
+	
+	# Crear tabla
+	semaforo = pd.DataFrame()
+	for i in range(len(grupo_clases)):
+		mean_group = statistics.mean(predictions[i])
+		if mean_group < -0.01:
+			result = 'verde'
+		elif mean_group > 0.01:
+			result = 'rojo'
+		else:
+			result = 'amarillo'
+		semaforo[grupo_clases[i][0]] = [result]
+	return semaforo.T
 
 
