@@ -24,7 +24,7 @@ if __name__ == "__main__":
 	df_pymes_or = dat.read_file(ent.path_data_pyme, ent.sheet_data_pyme)
 	
 	# Using function: clean_data
-	df_pymes = dat.clean_data(df_pymes_or)
+	df_pymes = dat.clean_data_pymes(df_pymes_or)
 	"""
 	# Using metric_quantification with stress conditions
 	metric_s = pr.metric_quantification(df_pymes, ent.conditions_stress, 'Estres')
@@ -37,24 +37,43 @@ if __name__ == "__main__":
 	fig2 = vs.map_metric(metric_a, 'Adaptabilidad')
 	
 	'''
-	fig.show()
-	fig2.show()
+	#fig.show()
+	#fig2.show()
 	
 	'''
 	"""
 	# .. ............................................................................... .. #
 	# .. ............................................................................... .. #
 	
+	# Leer base de datos de precios original
 	df_prices_or = dat.read_file(ent.path_data_prices, ent.sheet_data_prices)
-	#generico = list(df_prices_or.groupby('Generico'))
-	categorias = list(df_prices_or.groupby('División'))
-	data = categorias[0][1]
-	temp = list(data.columns)
 	
+	# limpiar base de datos
+	df_prices = dat.clean_data_prices(df_prices_or)
+	
+	# Semaforo
+	semaforo = pr.semaforo_precios(df_prices)
+	
+
+	
+			
+	'''
+
 	# End time
 	#t1 = time()
 	
 	#print('el tiempo transcurrido fue: ' + str(t1-t0))
+	'''
+	
+
+	
+	
+	
+	
+	
+		
+		
+	
 	
 	
 	
