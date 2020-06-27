@@ -43,7 +43,7 @@ def read_file(file_path, sheet):
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Cleaning Database that is in a DataFrame
 # -- ------------------------------------------------------------------------------------ -- #
-def clean_data(df_data):
+def clean_data_pymes(df_data):
 	"""
     Parameters
     ---------
@@ -78,6 +78,121 @@ def clean_data(df_data):
 
 	return df
 
+
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: Cleaning Database that is in a DataFrame
+# -- ------------------------------------------------------------------------------------ -- #
+def clean_data_prices(df_data):
+	"""
+    Parameters
+    ---------
+    :param:
+        df_data: DataFrame : data in a DF
+
+    Returns
+    ---------
+    :return:
+        df: DataFrame : clean data in DF
+
+    Debuggin
+    ---------
+        df_data = read_file(ent.path, ent.sheet)
+
+	"""
+	# Hacer copia
+	df = df_data.copy()
+	
+	# Quitar numeros innecesarios
+	def col_no_numb(df):
+		# De las columnas
+		col_n = ['División', 'Grupo', 'Clase']
+		# Quitar numeros
+		no_numb = [df[i].str.replace('\d+', '') for i in col_n]
+		# Quitar punto y espacio inicial
+		for i in range(len(col_n)):
+			point = ['. ', '.. ', '... ']
+			df[col_n[i]] = no_numb[i].str.replace(point[i], '', regex=False)
+		return df
+	df = col_no_numb(df)
+	
+	# Nombre de todas las columnas con precios acomodadas correctamente
+	col_df = list(df.columns)[::-1][0:22]
+	
+	# Merge ciertas columnas de original con las diferencias
+	df_new = pd.merge(
+						df[['División', 'Grupo', 'Clase', 'Generico', 'Especificación']], 
+						df[col_df].iloc[:,1:], 
+				   left_index=True, right_index=True)
+	return df_new
+
+
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: Separar series de tiempo del data frame de series de tiempo
+# -- ------------------------------------------------------------------------------------ -- #
+def series_tiempo(df_data, p_clase):
+	"""
+    Parameters
+    ---------
+    :param:
+        df_data: DataFrame : data en un DF
+		p_clase: str : clase que se requieren los productos
+
+    Returns
+    ---------
+    :return:
+        series_tiempo: list : todas las series de tiempo
+
+    Debuggin
+    ---------
+        df_data = df_prices
+		p_clase = 'Accesorios y utensilios'
+
+	"""
+	# Agrupar por clase
+	clases = list(df_data.groupby('Clase'))
+	
+	# Busqueda de dataframe para la clase que se necesita
+	search = [clases[i][1] for i in range(len(clases)) if clases[i][0]==p_clase][0]
+	search.reset_index(inplace=True, drop=True)
+	
+	# Agrupar por generico
+	generico = list(search.groupby('Generico'))
+	
+	# Series de tiempo por Generico
+	series_tiempo = [generico[i][1].median().rename(generico[i][0], 
+					     inplace=True) for i in range(len(generico))]
+	
+	return series_tiempo
+
+
+# -- ------------------------------------------------------------------------------------ -- #
+# -- Function: lista de grupos con cada clase de productos
+# -- ------------------------------------------------------------------------------------ -- #
+def clases(df_prices):
+	"""
+    Parameters
+    ---------
+    :param:
+        df_data: DataFrame : data en un DF
+		p_clase: str : clase que se requieren los productos
+
+    Returns
+    ---------
+    :return:
+        series_tiempo: list : todas las series de tiempo de productos de la clase
+
+    Debuggin
+    ---------
+        df_data = df_prices
+		p_clase = 'Accesorios y utensilios'
+
+	"""
+	# Separar por grupo
+	group_by_group = list(df_prices.groupby('Grupo'))
+	# lista por grupo y clases por grupo
+	list_clases = [[grupo[0], grupo[1]['Clase'].unique().tolist()] for grupo in group_by_group]
+	return list_clases
+		
 
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Function: Read shape file and storing it in to a DataFrame
