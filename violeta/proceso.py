@@ -8,152 +8,217 @@
 # .. ................................................................................... .. #
 
 
-# Importing and initializing main Python libraries
+# Importar librerias
 import math
 import pandas as pd
 import numpy as np
 import datos as dat
 import warnings
 warnings.filterwarnings('ignore')
-
+import statistics
 import statsmodels.api as sm
 from scipy.stats import shapiro
-import statistics
 from statsmodels.stats.diagnostic import het_arch
 from statsmodels.stats.diagnostic import acorr_ljungbox
-from sklearn import linear_model
 from sklearn.metrics import r2_score
-
+from sklearn import linear_model
+from itertools import chain
 
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Function: Calculate metric
+# -- Function: Calcular metrica con diccionario
 # -- ------------------------------------------------------------------------------------ -- #
-def metric_quantification(df_data, conditions, metric_column):
+def metric_quantification(p_df_data, p_conditions, p_metric):
 	"""
+	Funcion que pasa un diccionario con condiciones por columna al dataframe de pymes
+	que regresa la suma de la metrica de acuerdo a las condiciones que se le de
+	
     Parameters
     ---------
-    :param:
-        df_data: DataFrame : datos en DF
+    p_df_data: DataFrame : datos de pymes en Dataframe
+	p_conditions: dict : diccionario con condiciones
+	p_metric: str : nombre de la metrica
 
     Returns
     ---------
-    :return:
-        df: DataFrame : Datos del archivo
+    df: dict : Diccionario con metrica en el df original y como matriz
 
     Debuggin
     ---------
-        df_data = read_file(ent.path, ent.sheet)
+	p_df_data = datos.clean_data_pymes((datos.read_file(
+							'Base_de_datos.xlsx', 'IIEG_E_1'))
+	p_conditions = entradas.conditions_stress
+	p_metric = 'Estres'
+	
 	"""
-	# Columns names
-	list_columns = list(conditions.keys())
-	# Conditions (dicts)
-	list_dict_conditions = list(conditions.values())
-	# List of lists with answers
+	# Nombre de columnas
+	list_columns = list(p_conditions.keys())
+	# Condiciones (dicts)
+	list_dict_conditions = list(p_conditions.values())
+	# Lista de lista con resultados
 	answer = [[f_condition(
 							list_dict_conditions[k], 
-							   df_data[list_columns[k]][i]
+							   p_df_data[list_columns[k]][i]
 							   ) 
-							for i in range(len(df_data))
+							for i in range(len(p_df_data))
 							] 
 					for k in range(len(list_columns))
 					]
-	# sum all
-	metric = pd.DataFrame(answer).sum()
-	df = df_data.copy()
-	df[metric_column] = metric
-	return df
+	# DataFrame con la matriz de todo
+	metric = pd.DataFrame(answer)
+	
+	# --------------------------
+	# Columna con suma
+	metric_sum = metric.sum()
+	
+	# Nombre de variables para columnas
+	col = list(p_conditions.keys())
+	
+	# Transponer tabla de metrica
+	metric_table = metric.T
+	
+	# Asignar nombres a las columnas
+	metric_table.columns = col
+	
+	# Agregar columna de suma total
+	metric_table['Total'] = metric_sum
+	
+	# --------------------------
+	
+	# Dataframe copia
+	df = p_df_data.copy()
+	
+	# Dataframe con columna de metrica
+	df[p_metric] = metric_sum
+	
+	return {'df_prices': df, 'metric_table': metric_table}
 
 
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Function: According with condition in dict
+# -- Function: Regresa el resultado de un dato de acuerdo a las condiciones
 # -- ------------------------------------------------------------------------------------ -- #
-def f_condition(dict_condition, data):
+def f_condition(p_dict_condition, p_data):
 	"""
+	Funcion que checa en el diccionario de condiciones para las metricas
+	el diccionario de condiciones contiene dentro otros diccionarios, donde:
+		el value del dict dentro del dict es p_codition (la condicion que se debe de cumplir)
+		y el key es el resultado que se asigna si cumple la condicion
+	esto lo checa para cada dato de acuerdo a la columna (key del dict) en otra funcion
+	
     Parameters
     ---------
-    :param:
-        dict_condition: dict : diccionario con condiciones
-		data: int or str: dato a comparar
-    Returns
+    p_dict_condition: dict : diccionario con condiciones
+	p_data: int or str: dato a comparar
+    
+	Returns
     ---------
-    :return:
-        int: valor de acuerdo a la condicion
+    int: valor de acuerdo a la condicion
 
     Debuggin
     ---------
-        dict_condition = list(ent.conditions_stress.values())[0]
-		data = df_data['ventas_porcentaje'][0]
-	"""
-	# valores que se necesitan poner
-	posible_results = list(dict_condition.keys())
-	# lista de condiciones
-	list_conditions = list(dict_condition.values())
-	# Utilizando la funcion para cada condicion
-	answer = [type_verification(list_conditions[i], posible_results[i], 
-							data) for i in range(len(list_conditions ))]
+	p_dict_condition = list(entradas.conditions_stress.values())[0]
+	p_data = datos.clean_data_pymes((datos.read_file(
+							'Base_de_datos.xlsx', 'IIEG_E_1'))['ventas_porcentaje'][0]
 	
+	"""
+	# Valores que se podrian poner
+	posible_results = list(p_dict_condition.keys())
+	
+	# lista de condiciones
+	list_conditions = list(p_dict_condition.values())
+	
+	# Utilizando la funcion para cada condicion
+	answer = [f_type_verification(list_conditions[i], posible_results[i], 
+							p_data) for i in range(len(list_conditions ))]
+	
+	# Si todos son cero, quiere decir que p_data es nan
 	if answer == [0]*len(answer):
 		return 0
+	
+	# Si no
 	else:
+		# Quitar los nan de la lista answer
 		lista = list(filter(None.__ne__, answer))
 		if len(lista) == 0:
-			return['error']
+			return np.nan
 		else:
+			# Regresar el resultado
 			return lista[0]
 		
 
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Function: Check what kind of condition is needed
+# -- Function: Checar la condicion de acuerdo a su tipo
 # -- ------------------------------------------------------------------------------------ -- #	
-def type_verification(condition, result, data):
+def f_type_verification(p_condition, p_result, p_data):
 	"""
+	Funcion que de acuerdo a los 3 parametros te regresa un resultado, 
+		p_data puede ser string o int, pero si p_condition es una lista se busca en tal
+		si esta se devuelve p_result, si p_data no es string entonces es numerico
+		si es nan devuelve 0 si es tupla, debe de estar entre ambos numeros de la tupla
+	
     Parameters
     ---------
-    :param:
-        condition: tuple or list : contiene las condiciones
-		result: int : numero si se cumple la condicion es el resultado
-		data: int or str: dato que se esta comparando para cuantificar
+    p_condition: tuple or list : contiene las condiciones
+	p_result: int : numero si se cumple la condicion es el resultado
+	p_data: int or str: dato que se esta comparando para cuantificar
 		
     Returns
     ---------
-    :return:
-        answer: int : numero de la metrica
+    p_result: int : numero de la metrica
 
     Debuggin
     ---------
-        condition = (0, 25)
-		result = 1
-		data = 10
+	p_condition = (0, 25)
+	p_result = 1
+	p_data = 10
 		
 	"""
 	# Si es lista tiene que estar en tal
-	if type(condition) == list:
-		if data in condition:
-			return result
+	if type(p_condition) == list:
+		if p_data in p_condition:
+			return p_result
 	
 	# Si es numerico
-	if type(data) != str:
-		if math.isnan(data):
+	if type(p_data) != str:
+		if math.isnan(p_data):
 			return 0
 		# Si es tuple, tiene que estar entre ambos numeros
-		if type(condition) == tuple:
-			if condition[0] < data and data <= condition[1]:
-				return result
+		if type(p_condition) == tuple:
+			if p_condition[0] < p_data and p_data <= p_condition[1]:
+				return p_result
 
 
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Function: According with condition in dict
+# -- Function: Predecir serie de tiempo
 # -- ------------------------------------------------------------------------------------ -- #
-def f_predict(p_serie_tiempo):
+def f_predict_time_series(p_serie_tiempo):
+	"""
+	Funcion que modela una serie de tiempo utilizando desde una regresion lineal hasta
+	un modelo sarima con metodo de box jenkins para predecir cual seria el cambio 
+	en los precios
 	
-	# meses en el futuro, predecir
+    Parameters
+    ---------
+    p_serie_tiempo: DataFrame : serie de tiempo a modelar
+
+    Returns
+    ---------
+    cambio_porc: float : cambio porcentual del ultimo precio a el que se predice
+
+    Debuggin
+    ---------
+	p_serie_tiempo = datos.clean_data_prices(
+							datos.read_file('Precios_INEGI.xlsx', 'Datos_acomodados'))
+	
+	"""
+	
+	# Meses en el futuro, predecir
 	meses = 6
 	
 	# Ultimo precio
 	ultimo_precio = p_serie_tiempo[len(p_serie_tiempo)-1]
 	
 	# ------------------------------------------ #
-	# Primero intentar con una regresión lineal
+	# Primero: intentar con una regresión lineal
 	# ------------------------------------------ #
 	
 	# Separar la informacion que se tiene de la serie de tiempo en y
@@ -176,7 +241,7 @@ def f_predict(p_serie_tiempo):
 	# R2 de sus residuales
 	r_2 = r2_score(y, y_pred)
 	
-	if r_2 > 0.85:
+	if r_2 > 0.9:
 		# sumar a la x ultima
 		value = x_o[-1]+meses
 		# predecir
@@ -188,7 +253,7 @@ def f_predict(p_serie_tiempo):
 	
 	else: 
 	# ------------------------------------------ #
-	# Segundo intentar modelar con SARIMA
+	# Segundo: intentar modelar con ARIMA
 	# ------------------------------------------ #
 	
 	# Empezar checando si es estacionaria
@@ -294,6 +359,9 @@ def f_predict(p_serie_tiempo):
 				
 				return colin, norm, heter
 			
+			# test en los residuales
+			resid_test = check_resid(arima_fitted)
+			
 			# predecir siguientes 6 meses
 			future_prices = arima_fitted.forecast(meses, alpha=0.05)
 			
@@ -302,83 +370,124 @@ def f_predict(p_serie_tiempo):
 			
 			cambio_porc = (ultimo_precio - prediction)/ultimo_precio
 			
-			if abs(cambio_porc) > 0.4:
-				return np.nan
-			else:
+			if abs(cambio_porc) < 0.4 and True in resid_test:
 				return cambio_porc
+			
+			else:
+				return np.nan
 
 
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Function: According with condition in dict
+# -- Function: Predecir todas las series de una clase
 # -- ------------------------------------------------------------------------------------ -- #
-def predict_clase(df_prices, clase):	
+def f_predict_clase(df_prices, clase):	
 	"""
+	Funcion que regresa todas las predicciones 
+	
     Parameters
     ---------
-    :param:
-        df_data: DataFrame : datos limpios de precios
-		p_clase: str : clase que se requieren la prediccion
+    df_data: DataFrame : datos limpios de precios
+	p_clase: str : clase que se requieren la prediccion
 
     Returns
     ---------
-    :return:
-        med_predict: float : porcentaje medio de la clase
+    med_predict: float : porcentaje medio de la clase
 
     Debuggin
     ---------
-        df_data = df_prices
-		p_clase = 'Accesorios y utensilios'
+	df_data = df_prices
+	p_clase = 'Accesorios y utensilios'
 		
 	"""
 	# Fragmentar por series de tiemo
-	time_series = dat.series_tiempo(df_prices, clase)
+	time_series = dat.f_time_series(df_prices, clase)
 	
 	# Predicciones de la clase (por producto)
-	predictions = [f_predict(time_series[s]) for s in range(len(time_series))]
+	predictions = [f_predict_time_series(time_series[s]) for s in range(len(time_series))]
 	
-	# mediana
-	med_predict = pd.DataFrame(predictions).mean()
-		
-	return med_predict[0]
+	# Series
+	df_predict = pd.Series(predictions)
+	df_predict.rename(clase, inplace=True)
+
+	return df_predict
 
 
 # -- ------------------------------------------------------------------------------------ -- #
-# -- Function: According with condition in dict
+# -- Function: Predecir todas las clases de todos los grupos y generar el semaforo
 # -- ------------------------------------------------------------------------------------ -- #
 def semaforo_precios(df_prices):
 	"""
+	Funcion que genera el dataframe de los precios con ayuda de las funciones:
+		f_predict_clase y a su vez f_predict_time_series
+	
     Parameters
     ---------
-    :param:
-        df_data: DataFrame : datos limpios de precios
-		p_clase: str : clase que se requieren la prediccion
+    df_data: DataFrame : datos limpios de precios
 
     Returns
     ---------
-    :return:
-        med_predict: float : porcentaje medio de la clase
+    med_predict: float : porcentaje medio de la clase
 
     Debuggin
     ---------
-        df_data = df_prices
-		p_clase = 'Accesorios y utensilios'
+	df_data = df_prices
 		
 	"""
 	# Clases del dataframe por grupo
-	grupo_clases = dat.clases(df_prices)
+	grupo_clases = dat.f_clases(df_prices)
 		
 	# Solo nombres de clases
-	clases_all = [[grupo_clases[i][1][j] for j in range(len(
-									grupo_clases[i][1]))] for i in range(len(grupo_clases))]
+	clases_all = [
+					[grupo_clases[i][1][j] for j in range(len(
+									grupo_clases[i][1]))
+							] for i in range(len(grupo_clases))
+					]
 		
 	# Medias de predicciones
-	predictions = [[predict_clase(df_prices, clases_all[i][j]
-						) for j in range(len(clases_all[i]))] for i in range(len(clases_all))]
+	predictions = [
+					[f_predict_clase(df_prices, clases_all[i][j]
+						).median() for j in range(len(clases_all[i]))
+							] for i in range(len(clases_all))
+					]
+	
+	# Ultimos precios
+	last_prices = [
+					[round(df_prices[df_prices['Clase']==clases_all[i][j]
+							]['may 2020'].median(), 2) for j in range(len(clases_all[i]))
+								] for i in range(len(clases_all))
+					]
+					
+	# Precios futuros
+	pred_prices = [ [ [	 
+						last_prices[i][j], 
+						round(last_prices[i][j]*(1+predictions[i][j]),4)
+						]
+								for j in range(len(clases_all[i]))
+							] for i in range(len(clases_all))
+					]
+	
+	# Nombres de indices
+	tuplas_2d = [[(grupo_clases[i][0], grupo_clases[i][1][j]) for j in range(len(grupo_clases[i][1]))
+								] for i in range(len(grupo_clases))]
+	# Aplanar lista
+	tuplas = list(chain.from_iterable(tuplas_2d))
+	
+	# Generar el multi index
+	ind = pd.MultiIndex.from_tuples(tuplas)
+
+	# Valores para DataFrame
+	values = np.array(list(chain.from_iterable(pred_prices)))
+	
+	# Dataframe con precios
+	df = pd.DataFrame(values, index = ind)
+	
+	cols = ['Ultimo precio', 'Precio para Nov 2020']
+	df.columns = cols
 	
 	# Crear tabla
 	semaforo = pd.DataFrame()
 	for i in range(len(grupo_clases)):
-		mean_group = statistics.mean(predictions[i])
+		mean_group = statistics.median(predictions[i])
 		if mean_group < -0.01:
 			result = 'verde'
 		elif mean_group > 0.01:
@@ -386,9 +495,8 @@ def semaforo_precios(df_prices):
 		else:
 			result = 'amarillo'
 		semaforo[grupo_clases[i][0]] = [result, round(mean_group*100, 3)]
-	return semaforo.T
-
-#%%
+		
+	return {'semaforo': semaforo.T, 'predicciones': df}
 
 
 
