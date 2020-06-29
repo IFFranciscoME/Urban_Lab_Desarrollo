@@ -18,8 +18,10 @@ path_data_prices = 'Precios_INEGI.xlsx'
 sheet_data_prices = 'Datos_acomodados'
 
 # GeoDatos de coordenadas por CP
-shp_path = "cp_jal_2/CP_14_Jal_v6.shp"
-kml_path = "cp_jal_2/CP_14_Jal_v6.kml"
+shp_path = "archivos/cp_jal_2/CP_14_Jal_v6.shp"
+kml_path = "archivos/cp_jal_2/CP_14_Jal_v6.kml"
+
+
 # -- ------------------------------------------------------------------------------------ -- #
 # -- Entrada para metrica de estres
 # -- ------------------------------------------------------------------------------------ -- #
@@ -34,7 +36,7 @@ conditions_stress = {
 							1: (-1, 25),
 							2: (25, 50),
 							3: (50, 75),
-							4: (75, 150) # 992
+							4: (75, 150)
 						},
 				'capacidad': {
 							1: (-1, 25),
@@ -62,49 +64,49 @@ conditions_stress = {
 							1: (-1, 6),
 							2: (6, 12),
 							3: (12, 18),
-							4: (18, 52) # 367
+							4: (18, 52)
 						},
 				'pago_impuestos': {
 							0: [100, 101, 102],
 							1: (-1, 6),
 							2: (6, 12),
 							3: (12, 18),
-							4: (18, 52) # 82
+							4: (18, 52)
 						},
 				'pago_creditos': {
 							0: [100, 101, 102],
 							1: (-1, 6),
 							2: (6, 12),
 							3: (12, 18),
-							4: (18, 52) # 556
+							4: (18, 52)
 						},
 				'pago_renta': {
 							0: [100, 101, 102],
 							1: (-1, 6),
 							2: (6, 12),
 							3: (12, 18),
-							4: (18, 52) # 85
+							4: (18, 52)
 						},
 				'pago_internet': {
 							0: [100, 101, 102],
 							1: (-1, 6),
 							2: (6, 12),
 							3: (12, 18),
-							4: (18, 52) # 85
+							4: (18, 52)
 						},
 				'pago_agua': {
 							0: [100, 101, 102],
 							1: (-1, 6),
 							2: (6, 12),
 							3: (12, 18),
-							4: (18, 52) # 85
+							4: (18, 52)
 						},
 				'pago_gas': {
 							0: [100, 101, 102],
 							1: (-1, 6),
 							2: (-1, 12),
 							3: (12, 18),
-							4: (18, 52) # 367
+							4: (18, 52)
 						},
 				'duracion': {
 							0: [100, 101, 102],
@@ -157,7 +159,7 @@ conditions_adaptability = {
 							0: [100, 'Incertidumbre sobre la duración de la caída en ventas',
 								   'Otro (Por favor especifique)', 
 								      'Multas del gobierno de la emergencia sanitaria', 
-									  'Depende del turismo'] ### else
+									  'Depende del turismo'] #else
 						},
 				'despidos': {
 							0: ['Sí', 'No cuenta con personal', 
@@ -199,9 +201,6 @@ conditions_adaptability = {
 							3: ['Sí']
 						}
 				}
-				
 
-tick_labels_stress = {'0': '0', '5': '5', '10':'10', '15':'15', '20':'20',
-					              '25':'25', '30':'30','35':'35', '40': '>40'}
-
-tick_labels_adaptability = {'0': '0', '5': '5', '10':'10', '15':'15', '20':'>20'}
+dict_conditions = { 'Estres': conditions_stress, 'Adaptabilidad': conditions_adaptability}
+dict_colors = { 'Estres': "Reds", 'Adaptabilidad': "Purp"}
